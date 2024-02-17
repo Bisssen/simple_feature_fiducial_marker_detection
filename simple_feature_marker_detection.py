@@ -14,10 +14,10 @@ CONTOUR = 4
 
 
 class marker_detection():
-    def __init__(self, outer_color_hue=120, color_range=30, sv_percentage=0.2,
+    def __init__(self, outer_color_hue=120, color_range=60, sv_percentage=0.2,
                  square_ratio=1.2, maximum_size_ratio=0.8, minimum_square_ratio=0.3,
                  minimum_size_inner=2, minimum_size_outer=40, minimum_size_edge=3,
-                 max_size_difference=6, max_distance=3, minimum_votes=3,
+                 max_size_difference=10, max_distance=3, minimum_votes=3,
                  use_backup_detection=False, debug=False):
         '''
         This class detects a specific marker and takes the following parameters:
