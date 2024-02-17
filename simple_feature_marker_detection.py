@@ -289,8 +289,8 @@ class marker_detection():
         or made in c++ instead
         '''
 
-        closest_distance_to_middle = 99999999999
-        back_up_candidate = []
+        best_candidate = []
+        best_candidate_vote = 0
         # Points are sorted inner > outer > edge > large to small contour area
         if len(contour_data) == 0:
             return None, False
@@ -299,19 +299,8 @@ class marker_detection():
             if not data[COLOR] == OUTER:
                 continue
 
-            # Don't search through the edges as candiates
-            if data[COLOR] > OUTER:
-                break
-
             # The candidates always votes for himself
             votes = 1
-            
-            distance_to_middle = np.sqrt((data[X_PIXEL] - image_h/2)**2 + (data[Y_PIXEL] - image_w/2)**2)
-            # Prioritize the outer detection as back up candidate
-            if data[COLOR] == OUTER or len(back_up_candidate) == 0:
-                if distance_to_middle < closest_distance_to_middle:
-                    closest_distance_to_middle = distance_to_middle
-                    back_up_candidate = data
 
             ### Inner for loop
             for inner_data in contour_data:
@@ -331,18 +320,32 @@ class marker_detection():
                     continue
                 votes += 1
             
-            if votes >= self.minimum_votes:
-                if self.debug:
-                    self.image = cv2.circle(self.image, (int(data[X_PIXEL]), int(data[Y_PIXEL])),
-                                            radius=3, color=(0, 255, 0), thickness=-1)
-                return data, False
+            # Select a new best candidate if it has the most votes
+            if votes > best_candidate_vote or len(best_candidate) == 0:
+                best_candidate = data
+                best_candidate_vote = votes
+            # If a candidate has equal votes then prioritize the one that is most in the middle of the image
+            elif votes == best_candidate_vote:
+                distance_to_middle = np.sqrt((data[X_PIXEL] - image_h/2)**2 + (data[Y_PIXEL] - image_w/2)**2)
+                distance_to_middle_best_candidate = np.sqrt((best_candidate[X_PIXEL] - image_h/2)**2 + (best_candidate[Y_PIXEL] - image_w/2)**2)
+                if distance_to_middle_best_candidate > distance_to_middle:
+                    best_candidate = data
+                    best_candidate_vote = votes
 
-        # Select the best back up candidate
-        if len(back_up_candidate) > 0:
+            self.image = cv2.putText(self.image, str(votes), (int(data[X_PIXEL]), int(data[Y_PIXEL])), cv2.FONT_HERSHEY_SIMPLEX, 1, (0,255,0), 1)
+
+        # If the best candidate have enough votes then return it
+        if best_candidate_vote >= self.minimum_votes:
             if self.debug:
-                self.image = cv2.circle(self.image, (int(back_up_candidate[X_PIXEL]), int(back_up_candidate[Y_PIXEL])),
-                                        radius=3, color=(255, 0, 0), thickness=-1)
-            return back_up_candidate, True
+                self.image = cv2.circle(self.image, (int(best_candidate[X_PIXEL]), int(best_candidate[Y_PIXEL])),
+                                        radius=3, color=(0, 255, 0), thickness=-1)
+            return best_candidate, False
+        # Otherwise return the best guess
+        elif len(best_candidate):
+            if self.debug:
+                self.image = cv2.circle(self.image, (int(best_candidate[X_PIXEL]), int(best_candidate[Y_PIXEL])),
+                                            radius=3, color=(255, 0, 0), thickness=-1)
+            return best_candidate, True
 
         return None, False
 
